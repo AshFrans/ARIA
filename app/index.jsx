@@ -189,12 +189,14 @@ export default function App() {
             </View>
           ))}
         </View>
-        <Text style={[styles.tabIndicator, { color: colors.textSecondary }]}>
-          {activeTab}
-        </Text>
-        <TouchableOpacity onPress={() => setShowSettings(true)} style={styles.gearBtn} accessibilityLabel="Settings">
-          <Text style={{ fontSize: 22 }}>⚙️</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <Text style={[styles.tabIndicator, { color: colors.textSecondary }]}>
+            {activeTab}
+          </Text>
+          <TouchableOpacity onPress={() => setShowSettings(true)} style={styles.gearBtn} accessibilityLabel="Settings">
+            <Text style={{ fontSize: 22 }}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Tab bar */}
@@ -308,6 +310,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   headerServices: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.md },
+  headerRight: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   serviceItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   serviceDot: { width: 6, height: 6, borderRadius: 3 },
   serviceLabel: { fontSize: fontSize.xs },
