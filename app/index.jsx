@@ -40,12 +40,37 @@ export default function App() {
   const [showChat, setShowChat] = useState(false); // mobile-only FAB toggle
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   // Context passed to ChatPanel so Aria can reference live data
   const [workContext, setWorkContext] = useState({ todos: [], noteSnippet: null, todayHours: 0, currentEntry: null });
   const [personalContext, setPersonalContext] = useState({ todos: [], noteSnippet: null });
 
   const colors = isDark ? dark : light;
+
+  // Service worker + install prompt (web only)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+    const onBeforeInstall = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+    setShowInstallBanner(false);
+  };
 
   // Load persisted settings and tab on mount
   useEffect(() => {
@@ -265,6 +290,19 @@ export default function App() {
           )}
         </View>
       )}
+      {/* Install banner */}
+      {Platform.OS === 'web' && showInstallBanner && (
+        <View style={[styles.installBanner, { borderTopColor: colors.border }]}>
+          <Text style={styles.installIcon}>📲</Text>
+          <Text style={[styles.installText, { color: colors.textSecondary }]}>Add {ariaName} to your home screen</Text>
+          <TouchableOpacity onPress={handleInstall} style={styles.installBtn}>
+            <Text style={styles.installBtnText}>Install</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowInstallBanner(false)} style={styles.installDismiss}>
+            <Text style={[styles.installDismissText, { color: colors.textTertiary }]}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -355,4 +393,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   fabBackText: { fontSize: fontSize.sm, fontWeight: '600' },
+  installBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: '#1e1b4b',
+    borderTopWidth: 1,
+    gap: spacing.sm,
+  },
+  installIcon: { fontSize: 18 },
+  installText: { flex: 1, fontSize: fontSize.sm },
+  installBtn: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  installBtnText: { color: '#fff', fontSize: fontSize.sm, fontWeight: '700' },
+  installDismiss: { padding: 4 },
+  installDismissText: { fontSize: 16, fontWeight: '600' },
 });
