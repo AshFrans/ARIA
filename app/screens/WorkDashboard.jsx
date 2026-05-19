@@ -1,11 +1,14 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import HoursCard from '../components/HoursCard';
 import TodoCard from '../components/TodoCard';
 import NoteSnippetCard from '../components/NoteSnippetCard';
+import CalendarCard from '../components/CalendarCard';
 import { spacing } from '../theme';
 
 export default function WorkDashboard({ settings, colors, onOpenNote, onTodosLoaded, onNoteLoaded, refreshing, onRefresh, refreshKey }) {
+  const [todos, setTodos] = useState([]);
+
   const githubConfig = useMemo(() => settings?.work_github_token
     ? {
         token: settings.work_github_token,
@@ -16,6 +19,11 @@ export default function WorkDashboard({ settings, colors, onOpenNote, onTodosLoa
   [settings?.work_github_token, settings?.work_github_owner, settings?.work_github_repo]);
 
   const dailyGoal = Number(settings?.work_hours_goal) || 8;
+
+  const handleTodosLoaded = useCallback((t) => {
+    setTodos(t);
+    onTodosLoaded?.(t);
+  }, [onTodosLoaded]);
 
   return (
     <ScrollView
@@ -30,11 +38,17 @@ export default function WorkDashboard({ settings, colors, onOpenNote, onTodosLoa
         colors={colors}
         refreshKey={refreshKey}
       />
+      <CalendarCard
+        clockifyKey={settings?.clockify_api_key}
+        todos={todos}
+        colors={colors}
+        refreshKey={refreshKey}
+      />
       <TodoCard
         githubConfig={githubConfig}
         tab="Work"
         colors={colors}
-        onTodosLoaded={onTodosLoaded}
+        onTodosLoaded={handleTodosLoaded}
         refreshKey={refreshKey}
         settings={settings}
       />

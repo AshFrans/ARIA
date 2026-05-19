@@ -274,6 +274,35 @@ export async function fetchHoursData(apiKey) {
   return handlers.clockify_get_today_hours();
 }
 
+// Returns a map of { "YYYY-MM-DD": totalHours } for every day in the given month that has entries
+export async function fetchMonthData(apiKey, year, month) {
+  if (!apiKey) return {};
+  try {
+    const headers = { 'X-Api-Key': apiKey };
+    const userRes = await fetch(`${CLOCKIFY_API}/user`, { headers });
+    if (!userRes.ok) return {};
+    const user = await userRes.json();
+    const start = new Date(year, month, 1).toISOString();
+    const end = new Date(year, month + 1, 1).toISOString();
+    const url = `${CLOCKIFY_API}/workspaces/${user.defaultWorkspace}/user/${user.id}/time-entries?start=${start}&end=${end}&page-size=500`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) return {};
+    const entries = await res.json();
+    const dayMap = {};
+    for (const e of entries) {
+      const d = new Date(e.timeInterval.start);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const secs = e.timeInterval.end ? parseDuration(e.timeInterval.duration) : elapsedFrom(e.timeInterval.start);
+      dayMap[key] = (dayMap[key] || 0) + secs;
+    }
+    const result = {};
+    for (const [k, secs] of Object.entries(dayMap)) result[k] = toHours(secs);
+    return result;
+  } catch {
+    return {};
+  }
+}
+
 export const clockifyIntegration = {
   name: 'clockify',
   description: 'Clockify time tracking — start/stop timers, get today\'s hours',

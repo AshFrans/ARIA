@@ -1,10 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import TodoCard from '../components/TodoCard';
 import NoteSnippetCard from '../components/NoteSnippetCard';
+import CalendarCard from '../components/CalendarCard';
 import { spacing } from '../theme';
 
 export default function PersonalDashboard({ settings, colors, onOpenNote, onTodosLoaded, onNoteLoaded, refreshing, onRefresh, refreshKey }) {
+  const [todos, setTodos] = useState([]);
+
   const githubConfig = useMemo(() => settings?.personal_github_token
     ? {
         token: settings.personal_github_token,
@@ -14,6 +17,11 @@ export default function PersonalDashboard({ settings, colors, onOpenNote, onTodo
     : null,
   [settings?.personal_github_token, settings?.personal_github_owner, settings?.personal_github_repo]);
 
+  const handleTodosLoaded = useCallback((t) => {
+    setTodos(t);
+    onTodosLoaded?.(t);
+  }, [onTodosLoaded]);
+
   return (
     <ScrollView
       style={styles.container}
@@ -21,11 +29,16 @@ export default function PersonalDashboard({ settings, colors, onOpenNote, onTodo
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      <CalendarCard
+        todos={todos}
+        colors={colors}
+        refreshKey={refreshKey}
+      />
       <TodoCard
         githubConfig={githubConfig}
         tab="Personal"
         colors={colors}
-        onTodosLoaded={onTodosLoaded}
+        onTodosLoaded={handleTodosLoaded}
         refreshKey={refreshKey}
         settings={settings}
       />
