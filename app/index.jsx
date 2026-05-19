@@ -10,6 +10,7 @@ import WorkDashboard from './screens/WorkDashboard';
 import PersonalDashboard from './screens/PersonalDashboard';
 import NoteEditor from './screens/NoteEditor';
 import Settings from './screens/Settings';
+import BugReportModal from './components/BugReportModal';
 import { light, dark, spacing, fontSize, radius } from './theme';
 
 const BREAKPOINT = 768;
@@ -38,6 +39,8 @@ export default function App() {
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [showChat, setShowChat] = useState(false); // mobile-only FAB toggle
+  const [showBugReport, setShowBugReport] = useState(false);
+  const [bugScreenshot, setBugScreenshot] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -148,6 +151,21 @@ export default function App() {
         { label: 'GitHub', connected: !!settings.personal_github_token },
       ];
 
+  const handleOpenBugReport = async () => {
+    if (Platform.OS === 'web') {
+      try {
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(document.body, { useCORS: true, scale: 0.6 });
+        setBugScreenshot(canvas.toDataURL('image/png'));
+      } catch {
+        setBugScreenshot(null);
+      }
+    } else {
+      setBugScreenshot(null);
+    }
+    setShowBugReport(true);
+  };
+
   if (!ready) return <SplashScreen ariaName={ariaName} />;
 
   // Full-screen overlays
@@ -218,6 +236,9 @@ export default function App() {
           <Text style={[styles.tabIndicator, { color: colors.textSecondary }]}>
             {activeTab}
           </Text>
+          <TouchableOpacity onPress={handleOpenBugReport} style={styles.gearBtn} accessibilityLabel="Report a bug">
+            <Text style={{ fontSize: 20 }}>🐛</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowSettings(true)} style={styles.gearBtn} accessibilityLabel="Settings">
             <Text style={{ fontSize: 22 }}>⚙️</Text>
           </TouchableOpacity>
@@ -290,6 +311,15 @@ export default function App() {
           )}
         </View>
       )}
+      {/* Bug report modal */}
+      <BugReportModal
+        visible={showBugReport}
+        onClose={() => setShowBugReport(false)}
+        colors={colors}
+        settings={settings}
+        screenshotDataUrl={bugScreenshot}
+      />
+
       {/* Install banner */}
       {Platform.OS === 'web' && showInstallBanner && (
         <View style={[styles.installBanner, { borderTopColor: colors.border }]}>
