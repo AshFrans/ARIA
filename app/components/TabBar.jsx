@@ -1,31 +1,39 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { spacing, fontSize, radius } from '../theme';
 
 export default function TabBar({ activeTab, onTabChange, colors }) {
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-      <View style={[styles.pill, { backgroundColor: colors.surfaceAlt }]}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'Work' && { backgroundColor: colors.accent }]}
-          onPress={() => onTabChange('Work')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'Work' }}
-        >
-          <Text style={[styles.label, { color: activeTab === 'Work' ? '#fff' : colors.textSecondary }]}>
-            Work
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'Personal' && { backgroundColor: colors.accent }]}
-          onPress={() => onTabChange('Personal')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'Personal' }}
-        >
-          <Text style={[styles.label, { color: activeTab === 'Personal' ? '#fff' : colors.textSecondary }]}>
-            Personal
-          </Text>
-        </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+      <View style={styles.tabRow}>
+        {['Work', 'Personal'].map(tab => {
+          const isActive = activeTab === tab;
+          const webGlow = Platform.OS === 'web' && isActive
+            ? { textShadow: `0 0 12px ${colors.accent}88` }
+            : {};
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, isActive && { borderBottomColor: colors.accent }]}
+              onPress={() => onTabChange(tab)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+            >
+              <View style={styles.tabInner}>
+                {isActive && (
+                  <Text style={[styles.prompt, { color: colors.accent }]}>▸ </Text>
+                )}
+                <Text style={[
+                  styles.label,
+                  { color: isActive ? colors.accent : colors.textTertiary, ...webGlow },
+                  isActive && styles.labelActive,
+                ]}>
+                  {tab.toUpperCase()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -33,24 +41,32 @@ export default function TabBar({ activeTab, onTabChange, colors }) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.md,
   },
-  pill: {
+  tabRow: {
     flexDirection: 'row',
-    borderRadius: radius.full,
-    padding: 3,
-    alignSelf: 'center',
+    gap: spacing.xl,
   },
   tab: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.full,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  prompt: {
+    fontSize: fontSize.xs,
+    fontWeight: '700',
   },
   label: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  labelActive: {
+    fontWeight: '800',
   },
 });
