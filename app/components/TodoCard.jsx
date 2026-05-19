@@ -406,7 +406,7 @@ export default function TodoCard({ githubConfig, tab, colors, onTodosLoaded, ref
                   />
                 )}
               </>
-            )
+            )}
 
             <TouchableOpacity
               style={[styles.saveBtn, { backgroundColor: saving || !newText.trim() ? colors.textTertiary : colors.accent }]}
