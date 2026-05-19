@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Platform, Image,
+  ScrollView, ActivityIndicator, Platform, Image, Linking,
 } from 'react-native';
 import { spacing, fontSize, radius } from '../theme';
 
@@ -115,14 +115,15 @@ export default function BugReportModal({ visible, onClose, colors, settings, scr
         }
       }
 
-      // Fallback: open GitHub new-issue page pre-filled in the browser
+      // Fallback: open GitHub new-issue page pre-filled
+      const params = new URLSearchParams({ title, body });
+      const newIssueUrl = `https://github.com/${ARIA_REPO}/issues/new?${params}`;
       if (Platform.OS === 'web') {
-        const params = new URLSearchParams({ title, body });
-        window.open(`https://github.com/${ARIA_REPO}/issues/new?${params}`, '_blank');
-        setResult({ ok: true, issueUrl: `https://github.com/${ARIA_REPO}/issues` });
+        window.open(newIssueUrl, '_blank');
       } else {
-        setResult({ ok: false, error: `Please report at github.com/${ARIA_REPO}` });
+        Linking.openURL(newIssueUrl);
       }
+      setResult({ ok: true, issueUrl: `https://github.com/${ARIA_REPO}/issues` });
     } catch (e) {
       setResult({ ok: false, error: e.message });
     }
