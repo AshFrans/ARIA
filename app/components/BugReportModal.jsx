@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { spacing, fontSize, radius } from '../theme';
 
-const ARIA_REPO = 'AshFrans/ARIA';
+const ARIA_REPO = 'AshFrans/ARIA-issues';
 const ARIA_ISSUES_API = `https://api.github.com/repos/${ARIA_REPO}/issues`;
 const GH_API = 'https://api.github.com';
 
