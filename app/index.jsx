@@ -11,7 +11,7 @@ import PersonalDashboard from './screens/PersonalDashboard';
 import NoteEditor from './screens/NoteEditor';
 import Settings from './screens/Settings';
 import BugReportModal from './components/BugReportModal';
-import { light, dark, spacing, fontSize, radius } from './theme';
+import { THEMES, spacing, fontSize, radius } from './theme';
 
 const BREAKPOINT = 768;
 
@@ -37,7 +37,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('Work');
   const [showSettings, setShowSettings] = useState(false);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [themeKey, setThemeKey] = useState('matrix');
   const [showChat, setShowChat] = useState(false); // mobile-only FAB toggle
   const [showBugReport, setShowBugReport] = useState(false);
   const [bugScreenshot, setBugScreenshot] = useState(null);
@@ -50,7 +50,7 @@ export default function App() {
   const [workContext, setWorkContext] = useState({ todos: [], noteSnippet: null, todayHours: 0, currentEntry: null });
   const [personalContext, setPersonalContext] = useState({ todos: [], noteSnippet: null });
 
-  const colors = isDark ? dark : light;
+  const colors = THEMES[themeKey] || THEMES.matrix;
 
   // Refresh when the calendar day rolls over (app foregrounded after midnight)
   const lastDateRef = useRef(new Date().toDateString());
@@ -95,7 +95,9 @@ export default function App() {
     (async () => {
       const all = await storage.getAllSettings();
       setSettings(all);
-      setIsDark(all.aria_theme === 'dark');
+      const stored = all.aria_theme;
+      // migrate old 'dark'→'matrix', 'light'→'light'
+      setThemeKey(stored === 'dark' ? 'matrix' : stored === 'light' ? 'light' : stored in THEMES ? stored : 'matrix');
       const tab = all.active_tab || 'Work';
       setActiveTab(tab);
 
@@ -108,15 +110,16 @@ export default function App() {
     await storage.set('active_tab', tab);
   }, []);
 
-  const handleThemeToggle = useCallback(async (val) => {
-    setIsDark(val);
-    await storage.set('aria_theme', val ? 'dark' : 'light');
+  const handleThemeChange = useCallback(async (key) => {
+    setThemeKey(key);
+    await storage.set('aria_theme', key);
   }, []);
 
   const reloadSettings = useCallback(async () => {
     const all = await storage.getAllSettings();
     setSettings(all);
-    setIsDark(all.aria_theme === 'dark');
+    const stored = all.aria_theme;
+    setThemeKey(stored === 'dark' ? 'matrix' : stored === 'light' ? 'light' : stored in THEMES ? stored : 'matrix');
   }, []);
 
   const handleSettingsClose = useCallback(() => {
@@ -189,8 +192,8 @@ export default function App() {
       <Settings
         colors={colors}
         onClose={handleSettingsClose}
-        onThemeToggle={handleThemeToggle}
-        isDark={isDark}
+        onThemeChange={handleThemeChange}
+        currentTheme={themeKey}
       />
     );
   }
@@ -229,7 +232,7 @@ export default function App() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
+        barStyle={themeKey === 'light' ? 'dark-content' : 'light-content'}
         backgroundColor={colors.headerBg}
       />
 

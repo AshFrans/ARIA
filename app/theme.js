@@ -1,4 +1,4 @@
-// Design system — spacing scale, colours, typography, shadows
+// Design system — spacing, typography, and theme palettes
 
 export const spacing = {
   xs: 4,
@@ -27,42 +27,115 @@ export const fontSize = {
   hero: 48,
 };
 
-// Steampunk / matrix dark theme — phosphor green + brass amber
-export const dark = {
-  background: '#090D09',
-  surface: '#101610',
-  surfaceAlt: '#182018',
-  border: '#243B24',
-  accent: '#3CCA78',           // phosphor terminal green
-  accentLight: '#0B180B',      // very dark green for tinted backgrounds
-  accentText: '#6EE7A0',       // lighter green for text
-  text: '#C8E6C8',             // soft green-white
-  textSecondary: '#6B9B6B',    // muted green
-  textTertiary: '#3D5C3D',     // dark muted green
-  danger: '#E06060',
-  success: '#3CCA78',
-  warning: '#C8892A',          // steampunk brass/amber
-  warningLight: '#1E1608',     // dark amber tint
+// ─── Matrix ──────────────────────────────────────────────────────────────────
+// Classic terminal. Phosphor green on near-black.
+export const matrix = {
+  background: '#040804',
+  surface: '#080F08',
+  surfaceAlt: '#0F1A0F',
+  border: '#1A2E1A',
+  accent: '#00CC44',
+  accentLight: '#061206',
+  accentText: '#33EE66',
+  text: '#88DD88',
+  textSecondary: '#4A8A4A',
+  textTertiary: '#2A502A',
+  danger: '#CC4444',
+  success: '#00CC44',
+  warning: '#AACC00',
+  warningLight: '#111800',
   shadow: '#000000',
-  chatBubbleUser: '#163326',
-  chatBubbleAria: '#182018',
-  chatTextUser: '#C8E6C8',
-  chatTextAria: '#C8E6C8',
-  tabActive: '#3CCA78',
-  tabInactive: '#3D5C3D',
-  headerBg: '#0B110B',
+  chatBubbleUser: '#0A2A10',
+  chatBubbleAria: '#0F1A0F',
+  chatTextUser: '#88DD88',
+  chatTextAria: '#88DD88',
+  tabActive: '#00CC44',
+  tabInactive: '#2A502A',
+  headerBg: '#050A05',
   cardShadow: {
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.55,
+    shadowOpacity: 0.7,
     shadowRadius: 20,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#243B24',
+    borderColor: '#1A2E1A',
   },
 };
 
-// Refined light theme — cohesive green family
+// ─── Steampunk ────────────────────────────────────────────────────────────────
+// Aged brass and copper on dark mahogany.
+export const steampunk = {
+  background: '#0D0905',
+  surface: '#181208',
+  surfaceAlt: '#221A0C',
+  border: '#3D2C10',
+  accent: '#CC8822',
+  accentLight: '#1C1408',
+  accentText: '#E8A840',
+  text: '#E8D4A0',
+  textSecondary: '#A07838',
+  textTertiary: '#604820',
+  danger: '#C04030',
+  success: '#5A9040',
+  warning: '#CC5520',
+  warningLight: '#1E1008',
+  shadow: '#000000',
+  chatBubbleUser: '#2A1C08',
+  chatBubbleAria: '#221A0C',
+  chatTextUser: '#E8D4A0',
+  chatTextAria: '#E8D4A0',
+  tabActive: '#CC8822',
+  tabInactive: '#604820',
+  headerBg: '#0F0B06',
+  cardShadow: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.7,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#3D2C10',
+  },
+};
+
+// ─── Cyberpunk ────────────────────────────────────────────────────────────────
+// Electric teal and neon on deep navy. Blade Runner / Tron.
+export const cyberpunk = {
+  background: '#06060E',
+  surface: '#0C0C1C',
+  surfaceAlt: '#141428',
+  border: '#1E1E3A',
+  accent: '#00DDCC',
+  accentLight: '#060E0E',
+  accentText: '#44EEE0',
+  text: '#C0D4F4',
+  textSecondary: '#5878AA',
+  textTertiary: '#303860',
+  danger: '#FF2266',
+  success: '#00DDCC',
+  warning: '#FF6030',
+  warningLight: '#160A06',
+  shadow: '#000000',
+  chatBubbleUser: '#0A2030',
+  chatBubbleAria: '#141428',
+  chatTextUser: '#C0D4F4',
+  chatTextAria: '#C0D4F4',
+  tabActive: '#00DDCC',
+  tabInactive: '#303860',
+  headerBg: '#080810',
+  cardShadow: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.7,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#1E1E3A',
+  },
+};
+
+// ─── Light ────────────────────────────────────────────────────────────────────
 export const light = {
   background: '#F2F7F2',
   surface: '#FFFFFF',
@@ -96,3 +169,35 @@ export const light = {
     borderColor: '#CCDECE',
   },
 };
+
+// Backward-compat alias
+export const dark = matrix;
+
+export const THEMES = { matrix, steampunk, cyberpunk, light };
+
+export const THEME_META = [
+  {
+    key: 'matrix',
+    name: 'MATRIX',
+    desc: 'Terminal green on black',
+    preview: { bg: '#080F08', accent: '#00CC44', secondary: '#AACC00' },
+  },
+  {
+    key: 'steampunk',
+    name: 'STEAMPUNK',
+    desc: 'Brass & copper on mahogany',
+    preview: { bg: '#181208', accent: '#CC8822', secondary: '#CC5520' },
+  },
+  {
+    key: 'cyberpunk',
+    name: 'CYBERPUNK',
+    desc: 'Electric teal on deep navy',
+    preview: { bg: '#0C0C1C', accent: '#00DDCC', secondary: '#FF2266' },
+  },
+  {
+    key: 'light',
+    name: 'LIGHT',
+    desc: 'Clean forest green',
+    preview: { bg: '#F2F7F2', accent: '#2A7D4F', secondary: '#9A6020' },
+  },
+];

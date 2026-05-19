@@ -4,14 +4,8 @@ import { fetchMonthData } from '../integrations/clockify';
 import { spacing, fontSize, radius } from '../theme';
 
 const DAY_LABELS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-const MONTH_NAMES = [
-  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
-];
-const MONTH_NAMES_FULL = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const MONTH_NAMES_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const PRIORITY_COLORS = {
   high:   { bg: '#2A0A0A', text: '#E06060', border: '#5A1A1A' },
@@ -68,12 +62,15 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
     }
   }
 
+  // Build grid: leading empty cells + day cells
   const cells = [];
   for (let i = 0; i < firstDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     cells.push({ day: d, ds });
   }
+  // Pad to full rows
+  while (cells.length % 7 !== 0) cells.push(null);
 
   const selDate = selectedDay ? new Date(selectedDay + 'T12:00:00') : null;
   const selTodos = selectedDay ? (todosByDate[selectedDay] || []) : [];
@@ -89,35 +86,41 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>CALENDAR</Text>
         </View>
         <View style={styles.navGroup}>
-          <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 10, bottom: 10, left: 14, right: 14 }} style={styles.navBtn}>
+          <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}>
             <Text style={[styles.navArrow, { color: colors.accent }]}>‹</Text>
           </TouchableOpacity>
           <Text style={[styles.monthLabel, { color: colors.text }]}>
             {MONTH_NAMES[viewMonth]} {viewYear}
           </Text>
-          <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 10, bottom: 10, left: 14, right: 14 }} style={styles.navBtn}>
+          <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}>
             <Text style={[styles.navArrow, { color: colors.accent }]}>›</Text>
           </TouchableOpacity>
         </View>
         {loading
-          ? <ActivityIndicator size="small" color={colors.accent} style={{ width: 16 }} />
-          : <View style={{ width: 16 }} />
+          ? <ActivityIndicator size="small" color={colors.accent} style={{ width: 20 }} />
+          : <View style={{ width: 20 }} />
         }
       </View>
 
-      {/* ── Day-of-week labels ── */}
-      <View style={[styles.grid, { borderBottomColor: colors.border }]}>
+      {/* ── Grid ── */}
+      <View style={[styles.grid, { borderColor: colors.border }]}>
+        {/* Day-of-week header row */}
         {DAY_LABELS.map(l => (
-          <View key={l} style={styles.cell}>
-            <Text style={[styles.dayLabel, { color: colors.textTertiary }]}>{l}</Text>
+          <View key={l} style={[styles.headerCell, { borderColor: colors.border, backgroundColor: colors.accentLight }]}>
+            <Text style={[styles.dayLabel, { color: colors.accent }]}>{l}</Text>
           </View>
         ))}
-      </View>
 
-      {/* ── Day cells ── */}
-      <View style={styles.grid}>
+        {/* Day cells */}
         {cells.map((cell, idx) => {
-          if (!cell) return <View key={`e${idx}`} style={styles.cell} />;
+          if (!cell) {
+            return (
+              <View
+                key={`e${idx}`}
+                style={[styles.dayCell, { borderColor: colors.border, backgroundColor: colors.background }]}
+              />
+            );
+          }
 
           const isToday = cell.ds === todayStr;
           const isSel = cell.ds === selectedDay;
@@ -126,30 +129,26 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
           const isPast = cell.ds < todayStr && !isToday;
           const isOverdue = isPast && hasTodo;
 
-          const todayGlow = Platform.OS === 'web'
-            ? { boxShadow: `0 0 14px ${colors.accent}99` }
-            : {};
-
-          const selGlow = Platform.OS === 'web' && isSel && !isToday
-            ? { boxShadow: `0 0 8px ${colors.accent}44` }
+          const todayGlow = Platform.OS === 'web' && isToday
+            ? { boxShadow: `inset 0 0 0 2px ${colors.accent}` }
             : {};
 
           return (
             <TouchableOpacity
               key={cell.ds}
               style={[
-                styles.cell,
                 styles.dayCell,
-                hasHours && !isToday && { backgroundColor: colors.accentLight },
-                isSel && !isToday && { backgroundColor: colors.accentLight },
+                { borderColor: colors.border },
+                isSel && { backgroundColor: colors.accentLight, borderColor: colors.accent },
+                isToday && { borderColor: colors.accent, ...todayGlow },
               ]}
               onPress={() => setSelectedDay(isSel ? null : cell.ds)}
-              activeOpacity={0.75}
+              activeOpacity={0.7}
             >
+              {/* Day number */}
               <View style={[
-                styles.dayCircle,
-                isToday && { backgroundColor: colors.accent, ...todayGlow },
-                isSel && !isToday && { borderWidth: 1.5, borderColor: colors.accent, ...selGlow },
+                styles.dayNumWrap,
+                isToday && { backgroundColor: colors.accent },
               ]}>
                 <Text style={[
                   styles.dayNum,
@@ -160,13 +159,13 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
                 </Text>
               </View>
 
-              {/* Bottom indicator row */}
-              <View style={styles.indicators}>
+              {/* Indicators — each one clearly inside its cell */}
+              <View style={styles.dotRow}>
                 {hasHours && (
-                  <View style={[styles.indicatorDot, { backgroundColor: colors.accent }]} />
+                  <View style={[styles.dot, { backgroundColor: colors.accent }]} />
                 )}
                 {hasTodo && (
-                  <View style={[styles.indicatorDot, { backgroundColor: isOverdue ? colors.danger : colors.warning }]} />
+                  <View style={[styles.dot, { backgroundColor: isOverdue ? colors.danger : colors.warning }]} />
                 )}
               </View>
             </TouchableOpacity>
@@ -195,7 +194,6 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
       {/* ── Selected day detail ── */}
       {selectedDay && (
         <View style={[styles.detail, { backgroundColor: colors.accentLight, borderColor: colors.border }]}>
-          {/* Terminal prompt + date */}
           <View style={styles.detailHeader}>
             <Text style={[styles.detailPrompt, { color: colors.accent }]}>▸</Text>
             <Text style={[styles.detailDate, { color: colors.text }]}>
@@ -210,15 +208,12 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
             )}
           </View>
 
-          {/* Hours row */}
           {clockifyKey && (
             <View style={styles.detailRow}>
               <Text style={[styles.detailKey, { color: colors.textTertiary }]}>TIME</Text>
               {selHours > 0 ? (
                 <View style={styles.detailHoursGroup}>
-                  <Text style={[styles.detailValue, { color: colors.accentText }]}>
-                    {selHours.toFixed(1)}h
-                  </Text>
+                  <Text style={[styles.detailValue, { color: colors.accentText }]}>{selHours.toFixed(1)}h</Text>
                   <View style={[styles.microBar, { backgroundColor: colors.border }]}>
                     <View style={[styles.microBarFill, {
                       width: `${Math.min((selHours / 8) * 100, 100)}%`,
@@ -232,7 +227,6 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
             </View>
           )}
 
-          {/* Todos */}
           {selTodos.length > 0 ? (
             <View style={styles.detailTodos}>
               {selTodos.map(t => {
@@ -240,14 +234,10 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
                 return (
                   <View key={t.id} style={styles.detailTodoRow}>
                     <Text style={[styles.detailBullet, { color: colors.accent }]}>·</Text>
-                    <Text style={[styles.detailTodoText, { color: colors.text }]} numberOfLines={1}>
-                      {t.text}
-                    </Text>
+                    <Text style={[styles.detailTodoText, { color: colors.text }]} numberOfLines={1}>{t.text}</Text>
                     {t.priority && pc && (
                       <View style={[styles.priorityTag, { backgroundColor: pc.bg, borderColor: pc.border }]}>
-                        <Text style={[styles.priorityTagText, { color: pc.text }]}>
-                          {t.priority.toUpperCase()}
-                        </Text>
+                        <Text style={[styles.priorityTagText, { color: pc.text }]}>{t.priority.toUpperCase()}</Text>
                       </View>
                     )}
                   </View>
@@ -273,8 +263,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     overflow: 'hidden',
   },
-
-  // Header
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -285,44 +273,53 @@ const styles = StyleSheet.create({
   titleBar: { width: 3, height: 13, borderRadius: 2 },
   sectionTitle: { fontSize: fontSize.xs, fontWeight: '700', letterSpacing: 1.5 },
   navGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  navBtn: { padding: 2 },
   navArrow: { fontSize: 22, fontWeight: '300', lineHeight: 24 },
-  monthLabel: { fontSize: fontSize.sm, fontWeight: '700', letterSpacing: 1, minWidth: 90, textAlign: 'center' },
+  monthLabel: { fontSize: fontSize.sm, fontWeight: '700', letterSpacing: 1, minWidth: 88, textAlign: 'center' },
 
-  // Grid
+  // Grid: outer border, cells share borders
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
     marginBottom: spacing.xs,
   },
-  cell: {
+  headerCell: {
     width: '14.2857%',
     alignItems: 'center',
-    paddingVertical: 3,
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
   },
+  dayLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
   dayCell: {
+    width: '14.2857%',
+    minHeight: 48,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
+    paddingHorizontal: 2,
   },
-  dayLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    paddingVertical: spacing.xs,
-  },
-  dayCircle: {
-    width: 30,
-    height: 30,
+  dayNumWrap: {
+    width: 26,
+    height: 26,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayNum: { fontSize: 12, fontWeight: '500' },
-
-  // Indicators
-  indicators: { flexDirection: 'row', gap: 2, marginTop: 2, height: 4 },
-  indicatorDot: { width: 4, height: 4, borderRadius: 2 },
+  dayNum: { fontSize: 12, fontWeight: '600' },
+  dotRow: {
+    flexDirection: 'row',
+    gap: 2,
+    justifyContent: 'center',
+    minHeight: 6,
+  },
+  dot: { width: 5, height: 5, borderRadius: 3 },
 
   // Legend
   legend: {
@@ -344,38 +341,21 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     gap: spacing.xs,
   },
-  detailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: 4,
-  },
+  detailHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 },
   detailPrompt: { fontSize: fontSize.sm, fontWeight: '700' },
   detailDate: { fontSize: fontSize.xs, fontWeight: '700', letterSpacing: 0.5, flex: 1 },
-  todayBadge: {
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
+  todayBadge: { borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: 5, paddingVertical: 1 },
   todayBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   detailKey: { fontSize: 10, fontWeight: '700', letterSpacing: 1, width: 40 },
   detailValue: { fontSize: fontSize.xs, fontWeight: '600' },
   detailHoursGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   microBar: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
   microBarFill: { height: '100%', borderRadius: 2 },
-
   detailTodos: { gap: 4, marginTop: 2 },
   detailTodoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   detailBullet: { fontSize: fontSize.lg, lineHeight: 16 },
   detailTodoText: { fontSize: fontSize.xs, flex: 1, lineHeight: 16 },
-  priorityTag: {
-    borderWidth: 1,
-    borderRadius: radius.sm - 2,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
+  priorityTag: { borderWidth: 1, borderRadius: radius.sm - 2, paddingHorizontal: 4, paddingVertical: 1 },
   priorityTagText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
 });

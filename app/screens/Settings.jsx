@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { storage } from '../lib/storage';
 import { createGitHubClient } from '../lib/github';
-import { spacing, fontSize, radius } from '../theme';
+import { spacing, fontSize, radius, THEME_META } from '../theme';
 
 const FIELDS = {
   aria: [
@@ -33,7 +33,7 @@ const INTEGRATION_TOGGLES = [
   { key: 'integrations_notes', label: 'Daily Notes (GitHub)', tab: 'Both tabs' },
 ];
 
-export default function Settings({ colors, onClose, onThemeToggle, isDark }) {
+export default function Settings({ colors, onClose, onThemeChange, currentTheme }) {
   const [values, setValues] = useState({});
   const [testing, setTesting] = useState({});
   const [testResults, setTestResults] = useState({});
@@ -129,17 +129,36 @@ export default function Settings({ colors, onClose, onThemeToggle, isDark }) {
           <FieldRow key={f.key} field={f} value={values[f.key] ?? ''} onChange={v => set(f.key, v)} colors={colors} />
         ))}
 
-        {/* Theme toggle */}
-        <View style={[styles.toggleRow, { borderColor: colors.border }]}>
-          <View>
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Dark Mode</Text>
-          </View>
-          <Switch
-            value={isDark}
-            onValueChange={onThemeToggle}
-            trackColor={{ false: colors.border, true: colors.accent }}
-            thumbColor="#fff"
-          />
+        {/* Theme picker */}
+        <SectionHeader title="THEME" colors={colors} />
+        <View style={styles.themeGrid}>
+          {THEME_META.map(t => {
+            const isActive = currentTheme === t.key;
+            return (
+              <TouchableOpacity
+                key={t.key}
+                style={[
+                  styles.themeCard,
+                  { backgroundColor: t.preview.bg, borderColor: isActive ? t.preview.accent : colors.border },
+                  isActive && { borderWidth: 2 },
+                ]}
+                onPress={() => onThemeChange(t.key)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.themeSwatches}>
+                  <View style={[styles.themeSwatch, { backgroundColor: t.preview.accent }]} />
+                  <View style={[styles.themeSwatch, { backgroundColor: t.preview.secondary }]} />
+                </View>
+                <Text style={[styles.themeName, { color: t.preview.accent }]}>{t.name}</Text>
+                <Text style={[styles.themeDesc, { color: t.preview.accent + '99' }]}>{t.desc}</Text>
+                {isActive && (
+                  <View style={[styles.themeCheck, { backgroundColor: t.preview.accent }]}>
+                    <Text style={styles.themeCheckText}>✓</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* WORK section */}
@@ -265,4 +284,29 @@ const styles = StyleSheet.create({
   testBtn: { borderWidth: 1, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minWidth: 120, justifyContent: 'center' },
   testBtnText: { fontSize: fontSize.sm, fontWeight: '600' },
   testResult: { fontSize: fontSize.xs, marginTop: 4, lineHeight: 18 },
+  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  themeCard: {
+    width: '47%',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: spacing.sm,
+    gap: 4,
+    position: 'relative',
+    minHeight: 80,
+  },
+  themeSwatches: { flexDirection: 'row', gap: 4, marginBottom: 2 },
+  themeSwatch: { width: 14, height: 14, borderRadius: 7 },
+  themeName: { fontSize: fontSize.xs, fontWeight: '800', letterSpacing: 1 },
+  themeDesc: { fontSize: 10, letterSpacing: 0.2 },
+  themeCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeCheckText: { color: '#000', fontSize: 10, fontWeight: '800' },
 });
