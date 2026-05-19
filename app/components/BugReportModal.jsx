@@ -7,6 +7,46 @@ import { spacing, fontSize, radius } from '../theme';
 
 const ARIA_REPO = 'AshFrans/ARIA';
 const ARIA_ISSUES_API = `https://api.github.com/repos/${ARIA_REPO}/issues`;
+const GH_API = 'https://api.github.com';
+
+// Upload PNG (data URL) to the user's repo and return the raw download URL
+async function uploadScreenshot(dataUrl, token, owner, repo) {
+  const base64 = dataUrl.split(',')[1];
+  const path = `bug-screenshots/${Date.now()}.png`;
+  const res = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message: 'Add bug report screenshot', content: base64 }),
+  });
+  if (!res.ok) throw new Error('screenshot upload failed');
+  const data = await res.json();
+  return data.content.download_url;
+}
+
+function buildBody(description, screenshotUrl) {
+  const sysInfo = Platform.OS === 'web'
+    ? `**Browser:** ${navigator.userAgent.slice(0, 120)}\n**Screen:** ${window.screen.width}×${window.screen.height}`
+    : `**Platform:** ${Platform.OS}`;
+
+  const lines = [
+    '## Description',
+    description.trim(),
+    '',
+    '## System Info',
+    sysInfo,
+  ];
+
+  if (screenshotUrl) {
+    lines.push('', '## Screenshot', `![Screenshot](${screenshotUrl})`);
+  }
+
+  lines.push('', '---', '*Reported via ARIA in-app bug reporter.*');
+  return lines.join('\n');
+}
 
 export default function BugReportModal({ visible, onClose, colors, settings, screenshotDataUrl }) {
   const [description, setDescription] = useState('');
@@ -20,31 +60,13 @@ export default function BugReportModal({ visible, onClose, colors, settings, scr
     }
   }, [visible]);
 
-  const getToken = () => settings?.work_github_token || settings?.personal_github_token || null;
-
-  const downloadScreenshot = () => {
-    if (!screenshotDataUrl || Platform.OS !== 'web') return;
-    const a = document.createElement('a');
-    a.href = screenshotDataUrl;
-    a.download = `aria-bug-${Date.now()}.png`;
-    a.click();
-  };
-
-  const buildIssueBody = () => {
-    const sysInfo = Platform.OS === 'web'
-      ? `**Browser:** ${navigator.userAgent.slice(0, 120)}\n**Screen:** ${window.screen.width}×${window.screen.height}`
-      : `**Platform:** ${Platform.OS}`;
-    return [
-      '## Description',
-      description.trim(),
-      '',
-      '## System Info',
-      sysInfo,
-      '',
-      '---',
-      '*Reported via ARIA in-app bug reporter.*',
-      screenshotDataUrl ? '_Screenshot attached — drag it into this issue._' : '',
-    ].join('\n').trim();
+  // Pick the first available GitHub config that has all three fields
+  const getGitHubConfig = () => {
+    const configs = [
+      { token: settings?.work_github_token, owner: settings?.work_github_owner, repo: settings?.work_github_repo },
+      { token: settings?.personal_github_token, owner: settings?.personal_github_owner, repo: settings?.personal_github_repo },
+    ];
+    return configs.find(c => c.token?.trim() && c.owner?.trim() && c.repo?.trim()) || null;
   };
 
   const handleSubmit = async () => {
@@ -52,15 +74,32 @@ export default function BugReportModal({ visible, onClose, colors, settings, scr
     setSubmitting(true);
 
     const title = `Bug: ${description.trim().slice(0, 72)}${description.length > 72 ? '…' : ''}`;
-    const body = buildIssueBody();
-    const token = getToken();
+    const ghConfig = getGitHubConfig();
 
     try {
-      if (token) {
+      // Step 1: upload screenshot to the user's repo so it gets a public raw URL
+      let screenshotUrl = null;
+      if (screenshotDataUrl && ghConfig) {
+        try {
+          screenshotUrl = await uploadScreenshot(
+            screenshotDataUrl,
+            ghConfig.token,
+            ghConfig.owner,
+            ghConfig.repo,
+          );
+        } catch (_) {
+          // Non-fatal — still submit the issue without a screenshot
+        }
+      }
+
+      const body = buildBody(description, screenshotUrl);
+
+      // Step 2: create issue on AshFrans/ARIA
+      if (ghConfig) {
         const res = await fetch(ARIA_ISSUES_API, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${ghConfig.token}`,
             Accept: 'application/vnd.github.v3+json',
             'Content-Type': 'application/json',
           },
@@ -69,25 +108,25 @@ export default function BugReportModal({ visible, onClose, colors, settings, scr
 
         if (res.ok) {
           const issue = await res.json();
-          downloadScreenshot();
-          // Open the issue so the user can drag in the screenshot
           if (Platform.OS === 'web') window.open(issue.html_url, '_blank');
           setResult({ ok: true, issueUrl: issue.html_url });
           setSubmitting(false);
           return;
         }
       }
-    } catch (_) {}
 
-    // Fallback: open GitHub new-issue URL pre-filled
-    if (Platform.OS === 'web') {
-      const params = new URLSearchParams({ title, body });
-      window.open(`https://github.com/${ARIA_REPO}/issues/new?${params}`, '_blank');
-      downloadScreenshot();
-      setResult({ ok: true, issueUrl: `https://github.com/${ARIA_REPO}/issues` });
-    } else {
-      setResult({ ok: false, error: 'Could not submit. Please report at github.com/' + ARIA_REPO });
+      // Fallback: open GitHub new-issue page pre-filled in the browser
+      if (Platform.OS === 'web') {
+        const params = new URLSearchParams({ title, body });
+        window.open(`https://github.com/${ARIA_REPO}/issues/new?${params}`, '_blank');
+        setResult({ ok: true, issueUrl: `https://github.com/${ARIA_REPO}/issues` });
+      } else {
+        setResult({ ok: false, error: `Please report at github.com/${ARIA_REPO}` });
+      }
+    } catch (e) {
+      setResult({ ok: false, error: e.message });
     }
+
     setSubmitting(false);
   };
 
@@ -131,7 +170,6 @@ export default function BugReportModal({ visible, onClose, colors, settings, scr
                   numberOfLines={5}
                   autoFocus
                 />
-
                 <TouchableOpacity
                   style={[styles.submitBtn, {
                     backgroundColor: description.trim() && !submitting ? colors.accent : colors.textTertiary,
@@ -146,13 +184,8 @@ export default function BugReportModal({ visible, onClose, colors, settings, scr
               </>
             ) : result.ok ? (
               <View style={styles.successBox}>
-                <Text style={[styles.successIcon]}>✓</Text>
+                <Text style={styles.successIcon}>✓</Text>
                 <Text style={[styles.successText, { color: colors.success }]}>Report submitted!</Text>
-                {screenshotDataUrl && (
-                  <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                    Your screenshot was downloaded. Open the issue and drag it in to attach it.
-                  </Text>
-                )}
                 {result.issueUrl && Platform.OS === 'web' && (
                   <TouchableOpacity onPress={() => window.open(result.issueUrl, '_blank')}>
                     <Text style={[styles.issueLink, { color: colors.accent }]}>View issue on GitHub ↗</Text>
@@ -166,9 +199,9 @@ export default function BugReportModal({ visible, onClose, colors, settings, scr
                 </TouchableOpacity>
               </View>
             ) : (
-              <View>
+              <View style={styles.successBox}>
                 <Text style={[styles.hint, { color: colors.danger }]}>{result.error}</Text>
-                <TouchableOpacity onPress={() => setResult(null)} style={styles.doneBtn}>
+                <TouchableOpacity onPress={() => setResult(null)} style={[styles.doneBtn, { borderColor: colors.border }]}>
                   <Text style={[styles.doneBtnText, { color: colors.accent }]}>Try again</Text>
                 </TouchableOpacity>
               </View>

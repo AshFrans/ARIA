@@ -53,6 +53,8 @@ export const storage = {
       'integrations_todos',
       'integrations_notes',
       'active_tab',
+      'work_custom_projects',
+      'personal_custom_projects',
     ];
     const result = {};
     for (const key of keys) {

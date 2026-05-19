@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, useWindowDimensions,
-  SafeAreaView, StatusBar, ActivityIndicator, Platform,
+  SafeAreaView, StatusBar, ActivityIndicator, Platform, AppState,
 } from 'react-native';
 import { storage } from './lib/storage';
 import TabBar from './components/TabBar';
@@ -51,6 +51,21 @@ export default function App() {
   const [personalContext, setPersonalContext] = useState({ todos: [], noteSnippet: null });
 
   const colors = isDark ? dark : light;
+
+  // Refresh when the calendar day rolls over (app foregrounded after midnight)
+  const lastDateRef = useRef(new Date().toDateString());
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        const today = new Date().toDateString();
+        if (today !== lastDateRef.current) {
+          lastDateRef.current = today;
+          setRefreshKey(k => k + 1);
+        }
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // Service worker + install prompt (web only)
   useEffect(() => {

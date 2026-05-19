@@ -14,7 +14,7 @@ const FIELDS = {
   ],
   work: [
     { key: 'groq_api_key', label: 'Groq API Key', placeholder: 'gsk_…', secure: true, link: 'https://console.groq.com/keys', linkLabel: 'Get key ↗' },
-    { key: 'clockify_api_key', label: 'Clockify API Key', placeholder: 'Your Clockify key', secure: true, link: 'https://clockify.me/user/settings', linkLabel: 'Get key ↗' },
+    { key: 'clockify_api_key', label: 'Clockify API Key', placeholder: 'Your Clockify key', secure: true, link: 'https://app.clockify.me/user/settings', linkLabel: 'Get key ↗' },
     { key: 'work_github_token', label: 'GitHub PAT (Work)', placeholder: 'ghp_…', secure: true, link: 'https://github.com/settings/tokens', linkLabel: 'Create token ↗' },
     { key: 'work_github_owner', label: 'GitHub Username (Work)', placeholder: 'your-username', secure: false },
     { key: 'work_github_repo', label: 'GitHub Repo Name (Work)', placeholder: 'my-work-notes', secure: false },

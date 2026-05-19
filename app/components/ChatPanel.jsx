@@ -3,11 +3,29 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import * as Speech from 'expo-speech';
 import { Audio } from 'expo-av';
 import Groq from 'groq-sdk';
 import { buildHandlers, getEnabledDeclarations } from '../integrations';
+import DatePickerCard from './DatePickerCard';
 import { spacing, fontSize, radius } from '../theme';
+
+const DATE_PICKER_TOOL = {
+  type: 'function',
+  function: {
+    name: 'show_date_picker',
+    description: 'Show an interactive date picker to the user whenever a specific date needs to be chosen — scheduling, deadlines, events, reminders, or any task requiring a date input. Always call this instead of asking the user to type a date.',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Short question shown above the picker, e.g. "Which date should I set the deadline for?"',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+};
 
 // Parse the retry-after delay (seconds) from a Gemini 429 error message
 function parseRetryDelay(message) {
@@ -73,9 +91,10 @@ export default function ChatPanel({
   const [messages, setMessages] = useState([]);  // { id, role, text }
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
   const [retryCountdown, setRetryCountdown] = useState(0);
   const [lastUsage, setLastUsage] = useState(null); // { prompt_tokens, completion_tokens, total_tokens }
+  const [datePickerState, setDatePickerState] = useState(null); // { prompt } | null
+  const datePickerResolverRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const retryTimerRef = useRef(null);
@@ -117,6 +136,24 @@ export default function ChatPanel({
     }]);
   }, [apiKey, ariaName]);
 
+  // Pause the agentic loop until the user picks a date; resolves with ISO string or null (cancelled)
+  const awaitDatePicker = (prompt) => new Promise((resolve) => {
+    datePickerResolverRef.current = resolve;
+    setDatePickerState({ prompt });
+  });
+
+  const handleDateConfirm = (iso) => {
+    setDatePickerState(null);
+    datePickerResolverRef.current?.(iso);
+    datePickerResolverRef.current = null;
+  };
+
+  const handleDateCancel = () => {
+    setDatePickerState(null);
+    datePickerResolverRef.current?.(null);
+    datePickerResolverRef.current = null;
+  };
+
   // sendMessage optionally accepts a text string to send directly (used by voice auto-send)
   const sendMessage = useCallback(async (textOverride) => {
     const text = textOverride !== undefined ? textOverride.trim() : input.trim();
@@ -139,7 +176,7 @@ export default function ChatPanel({
         noteSnippet: context?.noteSnippet,
       });
 
-      const tools = getEnabledDeclarations({ settings, activeTab });
+      const tools = [...getEnabledDeclarations({ settings, activeTab }), DATE_PICKER_TOOL];
       const handlers = buildHandlers({ settings, activeTab });
 
       // Build OpenAI-format message history
@@ -229,10 +266,23 @@ export default function ChatPanel({
             let result;
             try {
               const args = JSON.parse(tc.arguments || '{}');
-              result = handlers[tc.name]
-                ? await handlers[tc.name](args)
-                : { error: `Unknown function: ${tc.name}` };
-              if (!result?.error) anyToolSucceeded = true;
+              if (tc.name === 'show_date_picker') {
+                const iso = await awaitDatePicker(args.prompt || 'Select a date');
+                if (iso) {
+                  const formatted = new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                  });
+                  result = { selected_date: iso, formatted };
+                  anyToolSucceeded = true;
+                } else {
+                  result = { cancelled: true };
+                }
+              } else {
+                result = handlers[tc.name]
+                  ? await handlers[tc.name](args)
+                  : { error: `Unknown function: ${tc.name}` };
+                if (!result?.error) anyToolSucceeded = true;
+              }
             } catch (fnErr) {
               result = { error: fnErr.message };
             }
@@ -393,14 +443,6 @@ export default function ChatPanel({
     }
   }, [isRecording, apiKey]);
 
-  const speakLast = () => {
-    const last = [...messages].reverse().find(m => m.role === 'model');
-    if (!last?.text) return;
-    if (speaking) { Speech.stop(); setSpeaking(false); return; }
-    setSpeaking(true);
-    Speech.speak(last.text, { onDone: () => setSpeaking(false), onError: () => setSpeaking(false) });
-  };
-
   const renderItem = ({ item }) => {
     const isUser = item.role === 'user';
     return (
@@ -432,10 +474,28 @@ export default function ChatPanel({
       {/* Header */}
       <View style={[styles.panelHeader, { borderBottomColor: colors.border }]}>
         <Text style={[styles.panelTitle, { color: colors.text }]}>Chat with {ariaName}</Text>
-        <TouchableOpacity onPress={speakLast}>
-          <Text style={{ fontSize: 18 }}>{speaking ? '🔇' : '🔊'}</Text>
-        </TouchableOpacity>
       </View>
+
+      {/* Token / rate-limit status bar */}
+      {(lastUsage || retryCountdown > 0) && (
+        <View style={[styles.tokenBarOuter, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <View style={[styles.tokenBarTrack, { backgroundColor: colors.border }]}>
+            {retryCountdown > 0 ? (
+              <View style={[styles.tokenBarFill, { width: '100%', backgroundColor: colors.danger }]} />
+            ) : (
+              <View style={[styles.tokenBarFill, {
+                width: `${Math.min((lastUsage.total_tokens / MODEL_CONTEXT) * 100, 100)}%`,
+                backgroundColor: tokenBarColor(lastUsage.total_tokens, colors),
+              }]} />
+            )}
+          </View>
+          <Text style={[styles.tokenBarLabel, { color: retryCountdown > 0 ? colors.danger : colors.textTertiary }]}>
+            {retryCountdown > 0
+              ? `rate limited — ${retryCountdown}s`
+              : `${lastUsage.total_tokens.toLocaleString()} / 128k ctx`}
+          </Text>
+        </View>
+      )}
 
       {/* Input row */}
       <View style={[styles.inputRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
@@ -471,6 +531,17 @@ export default function ChatPanel({
         </TouchableOpacity>
       </View>
 
+      {/* Date picker — shown inline when ARIA needs a date */}
+      {datePickerState && (
+        <DatePickerCard
+          prompt={datePickerState.prompt}
+          onConfirm={handleDateConfirm}
+          onCancel={handleDateCancel}
+          colors={colors}
+          ariaName={ariaName}
+        />
+      )}
+
       {/* Messages — newest first */}
       <FlatList
         ref={listRef}
@@ -484,26 +555,6 @@ export default function ChatPanel({
         <View style={styles.typingRow}>
           <ActivityIndicator size="small" color={colors.accent} />
           <Text style={[styles.typingText, { color: colors.textSecondary }]}>{ariaName} is thinking…</Text>
-        </View>
-      )}
-      {/* Token / rate-limit status bar */}
-      {(lastUsage || retryCountdown > 0) && (
-        <View style={[styles.tokenBarOuter, { backgroundColor: colors.surface }]}>
-          <View style={[styles.tokenBarTrack, { backgroundColor: colors.border }]}>
-            {retryCountdown > 0 ? (
-              <View style={[styles.tokenBarFill, { width: '100%', backgroundColor: colors.danger }]} />
-            ) : (
-              <View style={[styles.tokenBarFill, {
-                width: `${Math.min((lastUsage.total_tokens / MODEL_CONTEXT) * 100, 100)}%`,
-                backgroundColor: tokenBarColor(lastUsage.total_tokens, colors),
-              }]} />
-            )}
-          </View>
-          <Text style={[styles.tokenBarLabel, { color: retryCountdown > 0 ? colors.danger : colors.textTertiary }]}>
-            {retryCountdown > 0
-              ? `rate limited — ${retryCountdown}s`
-              : `${lastUsage.total_tokens.toLocaleString()} / 128k ctx`}
-          </Text>
         </View>
       )}
     </KeyboardAvoidingView>
@@ -529,7 +580,7 @@ const styles = StyleSheet.create({
   iconBtn: { padding: spacing.xs, paddingBottom: spacing.sm },
   micIcon: { fontSize: 20 },
   input: { flex: 1, borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: Platform.OS === 'web' ? spacing.sm : spacing.xs, fontSize: fontSize.sm, maxHeight: 100, minHeight: 38 },
-  tokenBarOuter: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, gap: 3 },
+  tokenBarOuter: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, gap: 3, borderBottomWidth: StyleSheet.hairlineWidth },
   tokenBarTrack: { height: 4, borderRadius: 2, overflow: 'hidden' },
   tokenBarFill: { height: '100%', borderRadius: 2 },
   tokenBarLabel: { fontSize: 9, letterSpacing: 0.3 },

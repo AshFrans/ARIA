@@ -70,7 +70,7 @@ export default function NoteEditor({ githubConfig, tab, colors, onClose }) {
   };
 
   const githubUrl = githubConfig
-    ? `https://github.com/${githubConfig.owner}/${githubConfig.repo}/blob/main/${path}`
+    ? `https://github.com/${githubConfig.owner}/${githubConfig.repo}/blob/HEAD/${path}`
     : null;
 
   return (

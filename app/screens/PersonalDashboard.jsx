@@ -27,6 +27,7 @@ export default function PersonalDashboard({ settings, colors, onOpenNote, onTodo
         colors={colors}
         onTodosLoaded={onTodosLoaded}
         refreshKey={refreshKey}
+        settings={settings}
       />
       <NoteSnippetCard
         githubConfig={githubConfig}

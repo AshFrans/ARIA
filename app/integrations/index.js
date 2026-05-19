@@ -37,7 +37,14 @@ export function buildHandlers({ settings, activeTab }) {
 
   // Todos — both tabs (scoped via githubConfig)
   if (hasGitHub && settings.integrations_todos !== false) {
-    Object.assign(handlers, createTodosHandlers(githubConfig));
+    const customProjects = activeTab === 'Work'
+      ? (settings.work_custom_projects || [])
+      : (settings.personal_custom_projects || []);
+    Object.assign(handlers, createTodosHandlers(githubConfig, {
+      clockifyApiKey: activeTab === 'Work' ? settings.clockify_api_key : null,
+      customProjects,
+      tab: activeTab,
+    }));
   }
 
   // Notes — both tabs (scoped via githubConfig)

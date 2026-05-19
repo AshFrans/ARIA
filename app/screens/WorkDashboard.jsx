@@ -36,6 +36,7 @@ export default function WorkDashboard({ settings, colors, onOpenNote, onTodosLoa
         colors={colors}
         onTodosLoaded={onTodosLoaded}
         refreshKey={refreshKey}
+        settings={settings}
       />
       <NoteSnippetCard
         githubConfig={githubConfig}

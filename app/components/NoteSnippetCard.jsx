@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { createGitHubClient } from '../lib/github';
 import { todayPath, formatNoteDate, getMarkdownStyles } from '../lib/markdown';
@@ -44,16 +44,11 @@ export default function NoteSnippetCard({ githubConfig, tab, colors, onExpand, o
   useEffect(() => { load(); }, [load, refreshKey]);
 
   const githubUrl = hasConfig
-    ? `https://github.com/${githubConfig.owner}/${githubConfig.repo}/blob/main/${NOTE_PATH()}`
+    ? `https://github.com/${githubConfig.owner}/${githubConfig.repo}/blob/HEAD/${NOTE_PATH()}`
     : null;
 
-  // Snippet: first 3 meaningful lines after the heading
   const snippet = content
-    ? content
-        .split('\n')
-        .filter(l => l.trim() && !l.startsWith('# Notes'))
-        .slice(0, 4)
-        .join('\n')
+    ? content.split('\n').filter(l => l.trim() && !l.startsWith('# Notes')).join('\n')
     : null;
 
   return (
@@ -78,9 +73,15 @@ export default function NoteSnippetCard({ githubConfig, tab, colors, onExpand, o
         <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
       ) : snippet ? (
         <>
-          <View style={styles.snippetContainer} pointerEvents="none">
-            <Markdown style={mdStyles}>{snippet}</Markdown>
-          </View>
+          <ScrollView
+            style={styles.snippetScroll}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+          >
+            <View pointerEvents="none">
+              <Markdown style={mdStyles}>{snippet}</Markdown>
+            </View>
+          </ScrollView>
           <TouchableOpacity onPress={onExpand} style={styles.expandBtn}>
             <Text style={[styles.expandText, { color: colors.accent }]}>Open editor →</Text>
           </TouchableOpacity>
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: fontSize.xs, fontWeight: '700', letterSpacing: 1 },
   dateLabel: { fontSize: fontSize.xs, marginTop: 2 },
   actionLink: { fontSize: fontSize.xs, fontWeight: '600' },
-  snippetContainer: { maxHeight: 110, overflow: 'hidden' },
+  snippetScroll: { maxHeight: 220 },
   expandBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
   expandText: { fontSize: fontSize.sm, fontWeight: '600' },
   emptyBtn: { borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },

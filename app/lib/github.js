@@ -84,7 +84,7 @@ export function createGitHubClient({ token, owner, repo }) {
 
   // Return a direct URL to a file in the repo for "Open in GitHub" buttons
   function fileUrl(path) {
-    return `https://github.com/${owner}/${repo}/blob/main/${path}`;
+    return `https://github.com/${owner}/${repo}/blob/HEAD/${path}`;
   }
 
   // Verify the token works by fetching repo metadata
