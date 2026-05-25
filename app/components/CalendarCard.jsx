@@ -17,7 +17,7 @@ function toIso(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function CalendarCard({ clockifyKey, todos = [], colors, refreshKey }) {
+export default function CalendarCard({ clockifyKey, todos = [], colors, refreshKey, onAddTodo, dailyGoal }) {
   const today = new Date();
   const todayStr = toIso(today);
 
@@ -76,6 +76,16 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
   const selTodos = selectedDay ? (todosByDate[selectedDay] || []) : [];
   const selHours = selectedDay ? (monthHours[selectedDay] || 0) : 0;
 
+  const totalMonthHours = Object.values(monthHours).reduce((sum, h) => sum + h, 0);
+  const overdueCount = todos.filter(t => !t.completed && t.due && t.due < todayStr).length;
+  const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
+
+  const jumpToToday = () => {
+    setViewYear(today.getFullYear());
+    setViewMonth(today.getMonth());
+    setSelectedDay(todayStr);
+  };
+
   return (
     <View style={[styles.card, colors.cardShadow, { backgroundColor: colors.surface }]}>
 
@@ -96,11 +106,40 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
             <Text style={[styles.navArrow, { color: colors.accent }]}>›</Text>
           </TouchableOpacity>
         </View>
-        {loading
-          ? <ActivityIndicator size="small" color={colors.accent} style={{ width: 20 }} />
-          : <View style={{ width: 20 }} />
-        }
+        <View style={styles.headerRight}>
+          {!isCurrentMonth && (
+            <TouchableOpacity
+              onPress={jumpToToday}
+              style={[styles.todayBtn, { borderColor: colors.accent }]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={[styles.todayBtnText, { color: colors.accent }]}>TODAY</Text>
+            </TouchableOpacity>
+          )}
+          {loading
+            ? <ActivityIndicator size="small" color={colors.accent} style={{ width: 20 }} />
+            : <View style={{ width: 20 }} />
+          }
+        </View>
       </View>
+
+      {/* ── Summary row ── */}
+      {(clockifyKey || overdueCount > 0) && (
+        <View style={[styles.summaryRow, { borderColor: colors.border }]}>
+          {clockifyKey && (
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: colors.accentText }]}>{totalMonthHours.toFixed(1)}h</Text>
+              <Text style={[styles.summaryLabel, { color: colors.textTertiary }]}>this month</Text>
+            </View>
+          )}
+          {overdueCount > 0 && (
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: colors.danger }]}>{overdueCount}</Text>
+              <Text style={[styles.summaryLabel, { color: colors.textTertiary }]}>overdue</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* ── Grid ── */}
       <View style={[styles.grid, { borderColor: colors.border }]}>
@@ -250,6 +289,15 @@ export default function CalendarCard({ clockifyKey, todos = [], colors, refreshK
               <Text style={[styles.detailValue, { color: colors.textTertiary }]}>none due</Text>
             </View>
           )}
+
+          {onAddTodo && (
+            <TouchableOpacity
+              style={[styles.addTodoBtn, { borderColor: colors.accent + '66' }]}
+              onPress={() => onAddTodo(selectedDay)}
+            >
+              <Text style={[styles.addTodoBtnText, { color: colors.accent }]}>+ Add Todo</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -275,6 +323,13 @@ const styles = StyleSheet.create({
   navGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   navArrow: { fontSize: 22, fontWeight: '300', lineHeight: 24 },
   monthLabel: { fontSize: fontSize.sm, fontWeight: '700', letterSpacing: 1, minWidth: 88, textAlign: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  todayBtn: { borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 2 },
+  todayBtnText: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  summaryRow: { flexDirection: 'row', gap: spacing.lg, paddingVertical: spacing.xs, paddingHorizontal: spacing.xs, marginBottom: spacing.xs, borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.sm },
+  summaryItem: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  summaryValue: { fontSize: fontSize.sm, fontWeight: '700' },
+  summaryLabel: { fontSize: 10 },
 
   // Grid: outer border, cells share borders
   grid: {
@@ -352,6 +407,8 @@ const styles = StyleSheet.create({
   detailHoursGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   microBar: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
   microBarFill: { height: '100%', borderRadius: 2 },
+  addTodoBtn: { borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.sm, paddingVertical: 6, alignItems: 'center', marginTop: 4 },
+  addTodoBtnText: { fontSize: fontSize.xs, fontWeight: '700' },
   detailTodos: { gap: 4, marginTop: 2 },
   detailTodoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   detailBullet: { fontSize: fontSize.lg, lineHeight: 16 },

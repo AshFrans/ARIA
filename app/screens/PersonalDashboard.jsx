@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import TodoCard from '../components/TodoCard';
 import NoteSnippetCard from '../components/NoteSnippetCard';
@@ -7,6 +7,7 @@ import { spacing } from '../theme';
 
 export default function PersonalDashboard({ settings, colors, onOpenNote, onTodosLoaded, onNoteLoaded, refreshing, onRefresh, refreshKey }) {
   const [todos, setTodos] = useState([]);
+  const todoCardRef = useRef(null);
 
   const githubConfig = useMemo(() => settings?.personal_github_token
     ? {
@@ -33,8 +34,10 @@ export default function PersonalDashboard({ settings, colors, onOpenNote, onTodo
         todos={todos}
         colors={colors}
         refreshKey={refreshKey}
+        onAddTodo={(dateStr) => todoCardRef.current?.openAddWithDate(dateStr)}
       />
       <TodoCard
+        ref={todoCardRef}
         githubConfig={githubConfig}
         tab="Personal"
         colors={colors}

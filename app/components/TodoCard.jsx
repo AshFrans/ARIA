@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
   TextInput, ScrollView, Modal, Pressable, Platform,
@@ -54,7 +54,7 @@ async function loadClockifyProjects(apiKey) {
 
 // ─── component ───────────────────────────────────────────────────────────────
 
-export default function TodoCard({ githubConfig, tab, colors, onTodosLoaded, refreshKey, settings }) {
+const TodoCard = forwardRef(function TodoCard({ githubConfig, tab, colors, onTodosLoaded, refreshKey, settings }, ref) {
   const [todos, setTodos] = useState([]);
   const [sha, setSha] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -78,9 +78,26 @@ export default function TodoCard({ githubConfig, tab, colors, onTodosLoaded, ref
   // inline new-project creation inside modal
   const [creatingProject, setCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [projectFilter, setProjectFilter] = useState('');
 
   const hasConfig = githubConfig?.token && githubConfig?.owner && githubConfig?.repo;
   const customProjectsKey = tab === 'Work' ? 'work_custom_projects' : 'personal_custom_projects';
+
+  useImperativeHandle(ref, () => ({
+    openAddWithDate(dateStr) {
+      setNewText('');
+      setNewPriority(null);
+      const d = dateStr ? new Date(dateStr + 'T12:00:00') : null;
+      setNewDueDate(d && !isNaN(d) ? d : null);
+      setShowDatePicker(false);
+      setNewProject(null);
+      setProjectDropdownOpen(false);
+      setCreatingProject(false);
+      setNewProjectName('');
+      setProjectFilter('');
+      setAddVisible(true);
+    },
+  }));
 
   // ── load projects ──
   const loadProjects = useCallback(async () => {
@@ -146,7 +163,7 @@ export default function TodoCard({ githubConfig, tab, colors, onTodosLoaded, ref
   const openAdd = () => {
     setNewText(''); setNewPriority(null); setNewDueDate(null); setShowDatePicker(false);
     setNewProject(null); setProjectDropdownOpen(false);
-    setCreatingProject(false); setNewProjectName('');
+    setCreatingProject(false); setNewProjectName(''); setProjectFilter('');
     setAddVisible(true);
   };
 
@@ -262,7 +279,7 @@ export default function TodoCard({ githubConfig, tab, colors, onTodosLoaded, ref
               <>
                 <TouchableOpacity
                   style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
-                  onPress={() => { setProjectDropdownOpen(v => !v); setCreatingProject(false); }}
+                  onPress={() => { setProjectDropdownOpen(v => !v); setCreatingProject(false); setProjectFilter(''); }}
                 >
                   {newProject ? (
                     <View style={styles.dropdownTriggerInner}>
@@ -281,15 +298,34 @@ export default function TodoCard({ githubConfig, tab, colors, onTodosLoaded, ref
                     nestedScrollEnabled
                     keyboardShouldPersistTaps="handled"
                   >
-                    {/* None option */}
-                    <TouchableOpacity
-                      style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
-                      onPress={() => { setNewProject(null); setProjectDropdownOpen(false); }}
-                    >
-                      <Text style={[styles.dropdownItemText, { color: colors.textTertiary }]}>None</Text>
-                    </TouchableOpacity>
+                    {/* Filter input */}
+                    <View style={[styles.dropdownSearchRow, { borderBottomColor: colors.border, backgroundColor: colors.surfaceAlt }]}>
+                      <TextInput
+                        style={[styles.dropdownSearch, { color: colors.text }]}
+                        placeholder="Filter projects…"
+                        placeholderTextColor={colors.textTertiary}
+                        value={projectFilter}
+                        onChangeText={setProjectFilter}
+                        autoFocus
+                      />
+                      {projectFilter.length > 0 && (
+                        <TouchableOpacity onPress={() => setProjectFilter('')}>
+                          <Text style={{ color: colors.textTertiary, fontSize: 13 }}>✕</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
 
-                    {projects.map(p => (
+                    {/* None option */}
+                    {!projectFilter && (
+                      <TouchableOpacity
+                        style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                        onPress={() => { setNewProject(null); setProjectDropdownOpen(false); }}
+                      >
+                        <Text style={[styles.dropdownItemText, { color: colors.textTertiary }]}>None</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {projects.filter(p => p.name.toLowerCase().includes(projectFilter.toLowerCase())).map(p => (
                       <TouchableOpacity
                         key={p.id}
                         style={[styles.dropdownItem, { borderBottomColor: colors.border, backgroundColor: newProject === p.name ? p.color + '18' : 'transparent' }]}
@@ -420,7 +456,9 @@ export default function TodoCard({ githubConfig, tab, colors, onTodosLoaded, ref
       </Modal>
     </View>
   );
-}
+});
+
+export default TodoCard;
 
 // ─── TodoRow ─────────────────────────────────────────────────────────────────
 
@@ -503,7 +541,9 @@ const styles = StyleSheet.create({
   dropdownTrigger: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
   dropdownTriggerInner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dropdownTriggerText: { fontSize: fontSize.sm },
-  dropdownList: { borderWidth: 1, borderRadius: radius.sm, maxHeight: 180, marginTop: 2 },
+  dropdownList: { borderWidth: 1, borderRadius: radius.sm, maxHeight: 220, marginTop: 2 },
+  dropdownSearchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.xs },
+  dropdownSearch: { flex: 1, fontSize: fontSize.sm, paddingVertical: 4 },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: spacing.sm, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
   dropdownItemText: { fontSize: fontSize.sm },
   dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },

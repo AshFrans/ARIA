@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import HoursCard from '../components/HoursCard';
 import TodoCard from '../components/TodoCard';
@@ -8,6 +8,7 @@ import { spacing } from '../theme';
 
 export default function WorkDashboard({ settings, colors, onOpenNote, onTodosLoaded, onNoteLoaded, refreshing, onRefresh, refreshKey }) {
   const [todos, setTodos] = useState([]);
+  const todoCardRef = useRef(null);
 
   const githubConfig = useMemo(() => settings?.work_github_token
     ? {
@@ -43,8 +44,11 @@ export default function WorkDashboard({ settings, colors, onOpenNote, onTodosLoa
         todos={todos}
         colors={colors}
         refreshKey={refreshKey}
+        dailyGoal={dailyGoal}
+        onAddTodo={(dateStr) => todoCardRef.current?.openAddWithDate(dateStr)}
       />
       <TodoCard
+        ref={todoCardRef}
         githubConfig={githubConfig}
         tab="Work"
         colors={colors}
