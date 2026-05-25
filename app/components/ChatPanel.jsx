@@ -27,7 +27,7 @@ const DATE_PICKER_TOOL = {
   },
 };
 
-// Parse the retry-after delay (seconds) from a Gemini 429 error message
+// Parse the retry-after delay (seconds) from a Groq 429 error message
 function parseRetryDelay(message) {
   const match = message?.match(/retry[^\d]*(\d+)/i);
   return match ? parseInt(match[1], 10) : 30;

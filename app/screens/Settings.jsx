@@ -142,7 +142,7 @@ export default function Settings({ colors, onClose, onThemeChange, currentTheme 
                   { backgroundColor: t.preview.bg, borderColor: isActive ? t.preview.accent : colors.border },
                   isActive && { borderWidth: 2 },
                 ]}
-                onPress={() => onThemeChange(t.key)}
+                onPress={() => { onThemeChange(t.key); set('aria_theme', t.key); }}
                 activeOpacity={0.8}
               >
                 <View style={styles.themeSwatches}>
